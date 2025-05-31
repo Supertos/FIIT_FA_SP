@@ -17,8 +17,9 @@ private:
 
     class refcounted_stream final
     {
+        // <path: str, <n_ref, stream>> 
         static std::unordered_map<std::string, std::pair<size_t, std::ofstream>> _global_streams;
-
+        
         std::pair<std::string, std::ofstream*> _stream;
         friend client_logger;
         friend client_logger_builder;
@@ -47,6 +48,7 @@ private:
 
 private:
 
+    // <key: severtity, <list<refcounted_stream>, bool - console output>>
     std::unordered_map<logger::severity ,std::pair<std::forward_list<refcounted_stream>, bool>> _output_streams;
 
     std::string _format;
@@ -55,7 +57,7 @@ private:
 private:
 
     //opens all streams
-    client_logger(const std::unordered_map<logger::severity ,std::pair<std::forward_list<refcounted_stream>, bool>>& streams, std::string format);
+    client_logger(const std::unordered_map<logger::severity, std::pair<std::forward_list<refcounted_stream>, bool>>& streams, std::string format);
 
     std::string make_format(const std::string& message, severity sev) const;
 

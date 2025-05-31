@@ -12,7 +12,8 @@ class client_logger_builder final:
 {
 private:
 
-    std::unordered_map<logger::severity ,std::pair<std::forward_list<client_logger::refcounted_stream>, bool>> _output_streams;
+    std::unordered_map<logger::severity, std::pair<std::forward_list<client_logger::refcounted_stream>, bool>> _output_streams;
+    // <key: severtity, <list<refcounted_stream>, bool - console output>>
 
     std::string _format;
 

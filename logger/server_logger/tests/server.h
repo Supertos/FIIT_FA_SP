@@ -5,16 +5,19 @@
 #ifndef MP_OS_SERVER_H
 #define MP_OS_SERVER_H
 
-//#include <crow.h>
+#include <crow.h>
 #include <unordered_map>
 #include <logger.h>
 //#include <mutex>
 #include <shared_mutex>
 
-class server
-{
-    //crow::SimpleApp app;
 
+class server {
+
+    const std::string _separator = ",";
+
+    crow::SimpleApp app;
+    // <pid, <severity, <path, console>>>
     std::unordered_map<int, std::unordered_map<logger::severity, std::pair<std::string, bool>>> _streams;
 
     std::shared_mutex _mut;

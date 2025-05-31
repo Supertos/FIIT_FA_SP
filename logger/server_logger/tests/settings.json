@@ -1,0 +1,18 @@
+{
+	"log": {
+		"format": "[%d %t] [%s] %m",
+		"streams": [
+			{
+				"type": "file",
+				"paths": [
+					"a.txt"
+				],
+				"severities": "DEBUG"
+			},
+			{
+				"type": "console",
+				"severities": "TRACE"
+			}
+		]
+  	}
+}

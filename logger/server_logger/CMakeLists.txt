@@ -23,3 +23,14 @@ target_link_libraries(
         mp_os_lggr_srvr_lggr
         PUBLIC
         nlohmann_json::nlohmann_json)
+
+target_link_libraries(
+        mp_os_lggr_srvr_lggr
+        PRIVATE
+        httplib::httplib)
+
+target_link_libraries(
+        mp_os_lggr_srvr_lggr
+        PRIVATE
+        Crow::Crow
+        asio::asio)

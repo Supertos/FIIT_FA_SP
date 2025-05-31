@@ -8,14 +8,16 @@
 class server_logger_builder final:
     public logger_builder
 {
+    std::string _format;
 
     std::string _destination;
 
-    std::unordered_map<logger::severity ,std::pair<std::string, bool>> _output_streams;
+    std::unordered_map<logger::severity, std::pair<std::string, bool>> _output_streams;
 
 public:
 
-    server_logger_builder() : _destination("http://127.0.0.1:9200"){}
+    server_logger_builder() :
+            _destination("http://127.0.0.1:9200"), _format("%m"){}
 
 public:
 
