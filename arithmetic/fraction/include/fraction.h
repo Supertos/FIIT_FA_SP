@@ -42,6 +42,8 @@ public:
 
     fraction operator/(fraction const &other) const;
 
+    fraction operator-() const;
+
 public:
 
     bool operator==(fraction const &other) const noexcept;
