@@ -9,6 +9,26 @@
 #include <iterator>
 #include <mutex>
 
+struct alignas(size_t) block_metadata {
+	size_t size : 63;
+	bool allocated : 1;
+	block_metadata* next;
+	block_metadata* prev;
+	struct allocator_metadata* parent;
+} __attribute__( (__packed__) );
+
+struct alignas(size_t) allocator_metadata {
+	logger* loggerObj;
+	std::pmr::memory_resource* allocatorObj;
+	allocator_with_fit_mode::fit_mode fitMode;
+	size_t memSize;
+	std::mutex globalLock;
+	struct block_metadata* firstBlock;
+};
+
+
+
+
 class allocator_boundary_tags final :
     public smart_mem_resource,
     public allocator_test_utils,
@@ -18,114 +38,64 @@ class allocator_boundary_tags final :
 {
 
 private:
+    static constexpr const size_t metadataSize = sizeof(struct allocator_metadata);
 
-    /**
-     * TODO: You must improve it for alignment support
-     */
-    static constexpr const size_t allocator_metadata_size = sizeof(logger*) + sizeof(memory_resource*) + sizeof(allocator_with_fit_mode::fit_mode) +
-                                                            sizeof(size_t) + sizeof(std::mutex) + sizeof(void*);
+    static constexpr const size_t allocatedMetadataSize = sizeof(struct block_metadata);
 
-    static constexpr const size_t occupied_block_metadata_size = sizeof(size_t) + sizeof(void*) + sizeof(void*) + sizeof(void*);
+    static constexpr const size_t freeMetadataSize = 0;
 
-    static constexpr const size_t free_block_metadata_size = 0;
-
-    void *_trusted_memory;
+    void* _allocatorMemory;
 
 public:
-    
-    ~allocator_boundary_tags() override;
-    
-    allocator_boundary_tags(allocator_boundary_tags const &other);
-    
-    allocator_boundary_tags &operator=(allocator_boundary_tags const &other);
-    
+
+	struct BuddyAllocatorBlockMetadata* get_first(size_t size) noexcept;
+	struct BuddyAllocatorBlockMetadata* get_worst(size_t size) noexcept;
+	struct BuddyAllocatorBlockMetadata* get_best(size_t size) noexcept;
+	~allocator_boundary_tags() override;
+	
     allocator_boundary_tags(
-        allocator_boundary_tags &&other) noexcept;
-    
-    allocator_boundary_tags &operator=(
-        allocator_boundary_tags &&other) noexcept;
+        size_t memSize,
+        std::pmr::memory_resource *allocatorObj,
+        logger *loggerObj,
+        allocator_with_fit_mode::fit_mode fitMode );
 
-public:
-    
-    explicit allocator_boundary_tags(
-            size_t space_size,
-            std::pmr::memory_resource *parent_allocator = nullptr,
-            logger *logger = nullptr,
-            allocator_with_fit_mode::fit_mode allocate_fit_mode = allocator_with_fit_mode::fit_mode::first_fit);
+inline bool canMergePrev( struct block_metadata* block);
 
-public:
-    
-    [[nodiscard]] void *do_allocate_sm(
-        size_t bytes) override;
-    
-    void do_deallocate_sm(
-        void *at) override;
+inline bool canMergeNext( struct block_metadata* block);
+allocator_boundary_tags( allocator_boundary_tags &&other ) noexcept;
 
-    bool do_is_equal(const std::pmr::memory_resource& other) const noexcept override;
+void initBlockMetadata( struct block_metadata* block, struct block_metadata* prev, size_t size );
 
-public:
-    
-    inline void set_fit_mode(
-        allocator_with_fit_mode::fit_mode mode) override;
+void splitBlockAndInit( struct block_metadata* block, size_t size );
 
-public:
-    
-    std::vector<allocator_test_utils::block_info> get_blocks_info() const override;
+void mergeBlocks( struct block_metadata* a, struct block_metadata* b );
 
-private:
+[[nodiscard]] void* allocate( size_t size );
+[[nodiscard]] void* do_allocate_sm( size_t size );
+void do_deallocate_sm( void* ptr );
+bool do_is_equal(const std::pmr::memory_resource& other) const noexcept;
+	
+void deallocate( void* ptr );
 
-    std::vector<allocator_test_utils::block_info> get_blocks_info_inner() const override;
+struct block_metadata* firstfit( size_t size );
 
-/** TODO: Highly recommended for helper functions to return references */
+struct block_metadata* bestfit( size_t size );
 
-    inline logger *get_logger() const override;
+struct block_metadata* worstfit( size_t size );
 
-    inline std::string get_typename() const noexcept override;
+void* trustedMemoryBegin() const;
 
-    class boundary_iterator
-    {
-        void* _occupied_ptr;
-        bool _occupied;
-        void* _trusted_memory;
+size_t realBlockSize( size_t size );
 
-    public:
+inline void set_fit_mode( allocator_with_fit_mode::fit_mode mode );
+inline std::string get_typename() const noexcept;
+std::vector<allocator_test_utils::block_info> get_blocks_info_inner() const;
+std::vector<allocator_test_utils::block_info> get_blocks_info() const;
 
-        using iterator_category = std::bidirectional_iterator_tag;
-        using value_type = void*;
-        using reference = void*&;
-        using pointer = void**;
-        using difference_type = ptrdiff_t;
+allocator_with_fit_mode::fit_mode fitMode() const;
 
-        bool operator==(const boundary_iterator&) const noexcept;
-
-        bool operator!=(const boundary_iterator&) const noexcept;
-
-        boundary_iterator& operator++() & noexcept;
-
-        boundary_iterator& operator--() & noexcept;
-
-        boundary_iterator operator++(int n);
-
-        boundary_iterator operator--(int n);
-
-        size_t size() const noexcept;
-
-        bool occupied() const noexcept;
-
-        void* operator*() const noexcept;
-
-        void* get_ptr() const noexcept;
-
-        boundary_iterator();
-
-        boundary_iterator(void* trusted);
-    };
-
-    friend class boundary_iterator;
-
-    boundary_iterator begin() const noexcept;
-
-    boundary_iterator end() const noexcept;
+logger* get_logger() const;
+std::mutex& mutex() const;
 };
 
 #endif //MATH_PRACTICE_AND_OPERATING_SYSTEMS_ALLOCATOR_ALLOCATOR_BOUNDARY_TAGS_H
