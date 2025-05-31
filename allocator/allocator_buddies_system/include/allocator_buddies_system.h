@@ -9,18 +9,28 @@
 #include <mutex>
 #include <cmath>
 
+struct BuddyAllocatorMetadata {
+	logger* loggerObj;
+	std::pmr::memory_resource* allocatorObj;
+	allocator_with_fit_mode::fit_mode fitMode;
+	size_t memSize;
+	std::mutex globalLock;
+	struct BuddyAllocatorBlockMetadata* begin;
+};
+struct BuddyAllocatorBlockMetadata {
+	bool occupied : 1;
+	uint8_t size : 7;
+} __attribute__( (__packed__) );
+
 namespace __detail
 {
-    constexpr size_t nearest_greater_k_of_2(size_t size) noexcept
-    {
+    constexpr size_t nearest_greater_k_of_2(size_t size) noexcept {
         int ones_counter = 0, index = -1;
 
         constexpr const size_t o = 1;
 
-        for (int i = sizeof(size_t) * 8 - 1; i >= 0; --i)
-        {
-            if (size & (o << i))
-            {
+        for (int i = sizeof(size_t) * 8 - 1; i >= 0; --i) {
+            if (size & (o << i)) {
                 if (ones_counter == 0)
                     index = i;
                 ++ones_counter;
@@ -40,27 +50,8 @@ class allocator_buddies_system final:
 {
 
 private:
-
-
-    struct block_metadata
-    {
-        bool occupied : 1;
-        unsigned char size : 7;
-    };
-
     void *_trusted_memory;
-
-    /**
-     * TODO: You must improve it for alignment support
-     */
-
-    static constexpr const size_t allocator_metadata_size = sizeof(logger*) + sizeof(allocator_dbg_helper*) + sizeof(fit_mode) + sizeof(unsigned char) + sizeof(std::mutex);
-
-    static constexpr const size_t occupied_block_metadata_size = sizeof(block_metadata) + sizeof(void*);
-
-    static constexpr const size_t free_block_metadata_size = sizeof(block_metadata);
-
-    static constexpr const size_t min_k = __detail::nearest_greater_k_of_2(occupied_block_metadata_size);
+	static constexpr const size_t min_k = __detail::nearest_greater_k_of_2(sizeof(struct BuddyAllocatorBlockMetadata));
 
 public:
 
@@ -81,9 +72,9 @@ public:
     
     allocator_buddies_system &operator=(
         allocator_buddies_system &&other) noexcept;
-
+	struct BuddyAllocatorBlockMetadata* next_block( struct BuddyAllocatorBlockMetadata* b ) const;
     ~allocator_buddies_system() override;
-
+	std::mutex& mutex() const;
 public:
     
     [[nodiscard]] void *do_allocate_sm(
@@ -100,6 +91,10 @@ public:
 
     std::vector<allocator_test_utils::block_info> get_blocks_info() const noexcept override;
 
+struct BuddyAllocatorBlockMetadata* get_best(size_t size) noexcept;
+struct BuddyAllocatorBlockMetadata* get_worst(size_t size) noexcept;
+struct BuddyAllocatorBlockMetadata* get_first(size_t size) noexcept;
+
 private:
 
     
@@ -109,45 +104,8 @@ private:
 
     std::vector<allocator_test_utils::block_info> get_blocks_info_inner() const override;
 
-    /** TODO: Highly recommended for helper functions to return references */
-
-    class buddy_iterator
-    {
-        void* _block;
-
-    public:
-
-        using iterator_category = std::forward_iterator_tag;
-        using value_type = void*;
-        using reference = void*&;
-        using pointer = void**;
-        using difference_type = ptrdiff_t;
-
-        bool operator==(const buddy_iterator&) const noexcept;
-
-        bool operator!=(const buddy_iterator&) const noexcept;
-
-        buddy_iterator& operator++() & noexcept;
-
-        buddy_iterator operator++(int n);
-
-        size_t size() const noexcept;
-
-        bool occupied() const noexcept;
-
-        void* operator*() const noexcept;
-
-        buddy_iterator();
-
-        buddy_iterator(void* start);
-    };
-
-    friend class buddy_iterator;
-
-    buddy_iterator begin() const noexcept;
-
-    buddy_iterator end() const noexcept;
     
 };
 
 #endif //MATH_PRACTICE_AND_OPERATING_SYSTEMS_ALLOCATOR_ALLOCATOR_BUDDIES_SYSTEM_H
+
