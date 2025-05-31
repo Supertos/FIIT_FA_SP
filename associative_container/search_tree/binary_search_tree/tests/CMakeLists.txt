@@ -18,3 +18,7 @@ target_link_libraries(
         mp_os_assctv_cntnr_srch_tr_bnr_srch_tr_tests
         PRIVATE
         mp_os_assctv_cntnr_srch_tr_bnr_srch_tr)
+target_link_libraries(
+        mp_os_assctv_cntnr_srch_tr_bnr_srch_tr_tests
+        PRIVATE
+        mp_os_allctr_allctr_bdds_sstm)
