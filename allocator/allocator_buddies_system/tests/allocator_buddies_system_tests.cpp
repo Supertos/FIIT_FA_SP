@@ -48,6 +48,7 @@ TEST(positiveTests, test1)
     ASSERT_EQ(actual_blocks_state.size(), expected_blocks_state.size());
     for (int i = 0; i < actual_blocks_state.size(); i++)
     {
+		std::cout << i << std::endl;
         ASSERT_EQ(actual_blocks_state[i], expected_blocks_state[i]);
     }
 }
